@@ -1,0 +1,64 @@
+=title: "Assignment"
+author: "Ananya"
+date: "11/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE}
+library(caret)
+```
+### This document summarizes an attempt to build a simple machine learning algorithm, intended to predict from a sample data set how a barbell lift was performed.
+
+
+## Preprocessing
+
+### The data was first read in using the <TT>read.csv()</TT> function:
+```{r echo=TRUE}
+training <- read.csv("pml-training.csv")
+```
+
+### The resulting data frame had 160 variables and 19,622 observations.  The variables were rendered as one of three classes: numeric, integer, and factor.  In addition, multiple columns had a number of entries where the contents were "" or NA.  For consistency, all data columns were converted to numeric; at the same time, the first seven variables (index, user, timestamp, and window data) were discarded.
+```{r, warning = FALSE}
+## Create a vector with all of the columns' classes
+columnClasses <- sapply(training,class)
+## Convert all data columns to numeric
+for(i in 8:159){
+        if(columnClasses[i] != "numeric"){
+            if(columnClasses[i] == "factor"){
+                training[training[,i] == "",i] <- NA
+                training[,i] <- as.numeric(as.character(training[,i]))
+            }
+            training[,i] <- as.numeric(training[,i])
+        }
+    }
+## Remove the non-data columns
+training <- training[,-c(1:7)]
+```
+
+### This, in turn, generated a number of columns with NAs.  In fact, any columns with NAs consisted almost entirely of NA entries;
+```{r}
+NAcount <- sapply(training, function(x) sum(is.na(x)))
+unique(NAcount)
+```
+
+### The very small amount of data made any attempt to impute or otherwise fill in the data risky at best; as such, all columns with NA values were eliminated.
+```{r}
+training <- training[,ifelse(NAcount == 0, TRUE, FALSE)]
+```
+
+## Feature Selection
+
+### In order to select the relevant features, the various variables were plotted graphically.  To begin, the variables were plotted a few at a time using boxplots in R's <TT>featurePlot()</TT> function, like so:
+```{r}
+featurePlot(x = training[,8:10], y = training$classe, plot = "box")
+```
+
+### At this point, the plots were visually inspected.  Any variable where the boxes for a single variable had some significant differences were then further inspected via a stacked histogram, such as this one for the accel_belt_z variable above:
+
+```{r, warning = FALSE}
+ggplot(data = training, aes(x = accel_belt_z, fill = classe)) + geom_histogram()
+```
